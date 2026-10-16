@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+
+/*
+  DESIGN TOKENS
+  -------------
+  Every color in the app comes from these variables. Components never use raw
+  colors like `bg-white` or `text-gray-500`; they use the semantic names below
+  (`bg-surface`, `text-ink-muted`, ...). That way dark mode is just a second set
+  of values, and changing the accent color later is a one-line edit.
+*/
+
+/* `dark:` utilities apply when <html> has the `dark` class (we toggle it in JS). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Soft neutrals */
+  --canvas: #f7f8fa; /* page background */
+  --surface: #ffffff; /* cards */
+  --surface-2: #f1f3f6; /* hover states, inputs, subtle fills */
+  --line: #e6e8ec; /* borders and dividers */
+  --ink: #16181d; /* main text */
+  --ink-muted: #5b616e; /* secondary text */
+  --ink-subtle: #8b919c; /* hints, placeholders */
+
+  /* The one accent: sky blue */
+  --accent: #0284c7; /* buttons, active nav, XP bar */
+  --accent-ink: #0369a1; /* accent-colored text on light backgrounds */
+  --accent-soft: #e0f2fe; /* tinted backgrounds (active nav pill, badges) */
+  --on-accent: #ffffff; /* text on top of the accent */
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.05);
+
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: #0f1115;
+  --surface: #171a20;
+  --surface-2: #1f232b;
+  --line: #2a2f38;
+  --ink: #eceef2;
+  --ink-muted: #a3a9b5;
+  --ink-subtle: #6f7682;
+
+  --accent: #38bdf8;
+  --accent-ink: #7dd3fc;
+  --accent-soft: rgb(56 189 248 / 0.14);
+  --on-accent: #082f49;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+
+  color-scheme: dark;
+}
+
+/* Expose the variables to Tailwind so we can write `bg-surface`, `text-ink`, etc. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+
+  --shadow-card: var(--shadow-card);
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Rounded corners used across the app (Tailwind's defaults, nudged softer). */
+@theme {
+  --radius-card: 1.25rem;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    /* Smoothly cross-fade colors when switching light/dark. */
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
