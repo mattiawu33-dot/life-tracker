@@ -10,7 +10,7 @@ import {
   reactionPrompt,
   weeklyReviewPrompt,
 } from './prompts.js'
-import { apiKeyFor, findProvider, providerStatuses } from './providers.js'
+import { apiKeyFor, findModel, findProvider, providerStatuses } from './providers.js'
 import { parseTrainerRequest } from './schema.js'
 import { getUsageStore, serverDailyLimit, utcDay, type UsageStore } from './usage.js'
 
@@ -23,21 +23,21 @@ export interface Deps {
   env: Record<string, string | undefined>
   usage: UsageStore
   /** Builds the model. Tests swap this for a fake model. */
-  getModel: (providerId: string, apiKey: string, modelId: string) => LanguageModel
+  getModel: (providerId: string, apiKey: string, modelId: string, env: Record<string, string | undefined>) => LanguageModel
 }
 
 function defaultDeps(): Deps {
   return {
     env: process.env,
     usage: getUsageStore(),
-    getModel: (providerId, apiKey, modelId) => findProvider(providerId)!.create(apiKey, modelId),
+    getModel: (providerId, apiKey, modelId, env) => findProvider(providerId)!.create(apiKey, modelId, env),
   }
 }
 
 /** Per-feature settings. `reasoning` is the AI SDK's provider-neutral thinking level. */
 interface FeatureSettings {
   maxOutputTokens: number
-  reasoning: 'low' | 'medium'
+  reasoning: 'low' | 'medium' | 'provider-default'
 }
 
 const FEATURE_SETTINGS: Record<TrainerRequest['feature'], FeatureSettings> = {
@@ -104,17 +104,17 @@ export async function handleTrainer(req: Request, deps: Deps = defaultDeps()): P
   if (!provider) return fail('unknown_provider', `Unknown provider "${request.provider}".`, 400)
   const apiKey = apiKeyFor(provider, deps.env)
   if (!apiKey) return fail('provider_not_configured', `${provider.label} isn't set up: ${provider.envVar} is missing on the server.`, 403)
-  if (!provider.models.some((m) => m.id === request.model)) {
-    return fail('unknown_model', `"${request.model}" isn't in the allowed model list for ${provider.label}.`, 400)
-  }
+  const modelDef = findModel(provider, request.model)
+  if (!modelDef) return fail('unknown_model', `"${request.model}" isn't in the allowed model list for ${provider.label}.`, 400)
 
   // Count the request before calling the model, so bursts can't slip past the limit.
   const limit = serverDailyLimit(deps.env)
   const used = await deps.usage.increment(utcDay())
   if (used > limit) return fail('daily_limit_reached', `The trainer's daily limit (${limit} requests) has been reached. It resets tomorrow (UTC).`, 429)
 
-  const model = deps.getModel(provider.id, apiKey, request.model)
-  const settings = FEATURE_SETTINGS[request.feature]
+  const model = deps.getModel(provider.id, apiKey, request.model, deps.env)
+  const base = FEATURE_SETTINGS[request.feature]
+  const settings: FeatureSettings = modelDef.reasoning === false ? { ...base, reasoning: 'provider-default' } : base
 
   if (request.feature === 'chat') return streamChat(request, model, settings)
 

@@ -30,7 +30,7 @@ function deps(overrides: Partial<Deps> = {}, model = fakeModel('Nice work on tha
   return {
     env: { ANTHROPIC_API_KEY: 'sk-test', TRAINER_DAILY_LIMIT: '3' },
     usage: memoryUsageStore(),
-    getModel: (p, _k, m) => {
+    getModel: (p, _k, m, _env) => {
       calls.push(`${p}:${m}`)
       return model
     },

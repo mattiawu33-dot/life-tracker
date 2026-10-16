@@ -92,8 +92,8 @@ src/
 ## AI trainer
 
 An optional coach (Settings -> AI Trainer) that works with any AI provider:
-Anthropic Claude, OpenAI, Google Gemini, or OpenRouter (one key, many
-models). It's off by default, and nothing is sent anywhere while it's off.
+Anthropic Claude, OpenAI, Google Gemini, OpenRouter (one key, many models),
+or Ollama Cloud (hosted open models). It's off by default, and nothing is sent anywhere while it's off.
 
 - **Morning plan** for today, from your tasks, habits and (from step 6) calendar.
 - **Live reactions** (1-3 sentences) when you finish a big task, a habit
@@ -144,6 +144,7 @@ into the app. You only need one provider to start.
 | OpenAI | [platform.openai.com](https://platform.openai.com) -> API keys -> Create new secret key | `OPENAI_API_KEY` |
 | Google Gemini | [aistudio.google.com](https://aistudio.google.com) -> Get API key -> Create API key | `GOOGLE_GENERATIVE_AI_API_KEY` |
 | OpenRouter | [openrouter.ai](https://openrouter.ai) -> Keys -> Create Key | `OPENROUTER_API_KEY` |
+| Ollama Cloud | [ollama.com/settings/keys](https://ollama.com/settings/keys) -> Add API Key | `OLLAMA_API_KEY` |
 
 Each site shows the key **once**. Copy it straight into step 2; don't save it
 in a note, a chat or a file inside the project folder (other than `.env.local`).
@@ -177,9 +178,19 @@ Check that `git status` never lists `.env.local`.
 **If a key leaks** (pasted somewhere public, committed by accident), delete
 it on the provider's site right away and create a new one.
 
+**Ollama extras.** Ollama Cloud uses its OpenAI-compatible API at
+`https://ollama.com/v1`. Its defaults are open models: Gemma 4 31B (fast) and
+gpt-oss 120B (main). To use Ollama running on your own computer instead (free,
+no key needed by Ollama itself), set `OLLAMA_BASE_URL=http://localhost:11434/v1`
+and any non-empty `OLLAMA_API_KEY`, and make sure the models in the registry are
+pulled locally.
+
 ### Models
 
 Each provider has a **fast** model (live reactions) and a **main** model
 (plan, review, chat), both changeable in Settings. Only models listed in
 `server/trainer/providers.ts` can be used. Providers rename models often:
-if Test connection says a model isn't recognised, update its ID there.
+if Test connection says a model isn't recognised, update its ID there. For
+Ollama, the current IDs are listed at https://ollama.com/api/tags (or browse
+https://ollama.com/search?c=cloud). Models without a thinking mode are marked
+`reasoning: false` so no reasoning setting is sent to them.
