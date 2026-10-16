@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AppShell } from './components/layout/AppShell'
 import { CalendarPage } from './pages/CalendarPage'
 import { HabitsPage } from './pages/HabitsPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { StatsPage } from './pages/StatsPage'
 import { TasksPage } from './pages/TasksPage'
 import { TodayPage } from './pages/TodayPage'
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="habits" element={<HabitsPage />} />
           <Route path="stats" element={<StatsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

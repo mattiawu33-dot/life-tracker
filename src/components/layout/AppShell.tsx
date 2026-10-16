@@ -1,4 +1,6 @@
 import { Outlet } from 'react-router'
+import { ReactionToast } from '../../features/trainer/components/ReactionToast'
+import { useTrainerEvents } from '../../features/trainer/useTrainerEvents'
 import { BottomTabBar } from './BottomTabBar'
 import { Sidebar } from './Sidebar'
 
@@ -10,6 +12,7 @@ import { Sidebar } from './Sidebar'
  * and the tab bar hides. <Outlet /> is where the current page is rendered.
  */
 export function AppShell() {
+  useTrainerEvents()
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
@@ -19,6 +22,7 @@ export function AppShell() {
         </div>
       </main>
       <BottomTabBar />
+      <ReactionToast />
     </div>
   )
 }

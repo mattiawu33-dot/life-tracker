@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { ThemeToggle } from '../../theme/ThemeToggle'
 import { NAV_ITEMS } from './navItems'
@@ -31,7 +32,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-1">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? 'bg-accent-soft text-accent-ink' : 'text-ink-muted hover:bg-surface-2 hover:text-ink'
+            }`
+          }
+        >
+          <Settings className="size-[18px]" strokeWidth={2} />
+          Settings
+        </NavLink>
         <ThemeToggle showLabel />
       </div>
     </aside>

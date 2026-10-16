@@ -6,6 +6,7 @@ import { viewForList } from '../features/tasks/selectors'
 import { isDueToday } from '../features/habits/streaks'
 import { useHabits } from '../features/habits/store'
 import { useTasks } from '../features/tasks/store'
+import { CoachCard } from '../features/trainer/components/CoachCard'
 import { greeting, longDate } from '../lib/dates'
 import { useToday } from '../lib/useToday'
 
@@ -29,6 +30,7 @@ export function TodayPage() {
     <>
       <PageHeader title={greeting()} subtitle={longDate()} />
       <div className="grid gap-4 sm:grid-cols-2">
+        <CoachCard />
         <Link to="/tasks" className="group rounded-card focus-visible:outline-offset-4">
           <Card title="Tasks" className="h-full transition-shadow group-hover:shadow-lg">
             <div className="flex items-center gap-3">
