@@ -91,31 +91,28 @@ src/
 
 ## Step 8 plan: AI trainer
 
-An optional coach, switched on or off in Settings. When it's off, nothing is
+An optional coach that works with any AI provider (Anthropic Claude, OpenAI,
+Google Gemini to start, with more easy to add). When it's off, nothing is
 sent anywhere.
 
-**Features**
+**Features** (the same prompts work with every provider)
 - **Morning plan:** a short plan for the day based on today's calendar and tasks.
 - **Live reactions:** 1-3 sentence reactions to events: finishing a big task,
-  hitting the daily XP goal, losing a streak.
+  hitting the daily XP goal, losing a streak. These only run when an event
+  happens, never on a timer, and use a fast, low-cost model.
 - **Weekly review:** what went well, what slipped, one thing to try next week.
 - **Chat panel:** ask for advice about your schedule, studying or habits.
 
 **Tone:** encouraging but honest, like a coach. Live reactions stay at 1-3
 sentences.
 
-**Security**
-- The API key never appears in frontend code and is never committed.
-- A small serverless function (e.g. a Vercel or Netlify function) holds the
-  key in an environment variable and forwards requests to the Claude API.
-  The browser only ever talks to that function.
-- Local key files (`.env`, `.env.*`) are in `.gitignore`; only a
-  `.env.example` with a placeholder gets committed.
+**Backend:** a serverless function with one request/response format for the
+app and one adapter per provider behind it. The app never talks to a
+provider directly.
 
-**Cost**
-- Live reactions use the fast, low-cost model (`claude-haiku-5-5`) and run
-  only when an event happens, never on a timer.
-- Morning plan, weekly review and chat use `claude-opus-5-5` by default
-  (it can be switched to `claude-sonnet-5-5` to spend less).
-- A simple daily usage limit, enforced in the serverless function, caps
-  how many requests a day can make.
+**Keys:** one environment variable per provider, set only on the backend.
+Never in frontend code or git (`.env` files are in `.gitignore`).
+
+**Settings -> AI Trainer:** on/off toggle, provider dropdown (only providers
+whose key is configured), model dropdown, connection status, daily usage
+limit. There is no field for the key itself.
