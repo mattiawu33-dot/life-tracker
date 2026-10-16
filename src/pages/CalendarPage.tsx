@@ -10,6 +10,11 @@ import { Segmented } from '../components/ui/Segmented'
 import { DayChecklist } from '../features/calendar/components/DayChecklist'
 import { TimeBlockDialog, type BlockDraft } from '../features/calendar/components/TimeBlockDialog'
 import { calendarItems, openCounts, timeOf, type CalendarItem } from '../features/calendar/items'
+import { GoogleEventDialog } from '../features/google/components/GoogleEventDialog'
+import { GoogleStatusChip } from '../features/google/components/GoogleStatusChip'
+import { useGoogle } from '../features/google/context'
+import { eventTimes } from '../features/google/mapping'
+import type { GoogleEventItem } from '../features/google/types'
 import { TaskDetail } from '../features/tasks/components/TaskDetail'
 import { useTasks } from '../features/tasks/store'
 import { addDays, toISODate, type ISODate } from '../lib/dates'
@@ -39,6 +44,9 @@ export function CalendarPage() {
   const [range, setRange] = useState<{ from: ISODate; to: ISODate; title: string } | null>(null)
   const [draft, setDraft] = useState<BlockDraft | null>(null)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+  const [openEvent, setOpenEvent] = useState<GoogleEventItem | null>(null)
+  const google = useGoogle()
+  const googleOn = google.settings.connected && google.status !== 'not-configured'
 
   // Switch the calendar when the view button (or screen width) changes.
   useEffect(() => {
@@ -52,8 +60,8 @@ export function CalendarPage() {
   const counts = useMemo(() => (range ? openCounts(state.tasks, range.from, range.to, today) : new Map<ISODate, number>()), [state.tasks, range, today])
 
   const events = useMemo(
-    () =>
-      items.map((item) => ({
+    () => [
+      ...items.map((item) => ({
         id: item.id,
         title: item.title,
         start: item.start,
@@ -62,11 +70,41 @@ export function CalendarPage() {
         classNames: ['lt-event', ...(item.done ? ['lt-event-done'] : [])],
         extendedProps: { item },
       })),
-    [items],
+      // Google events, tinted with their calendar's color.
+      ...google.events.flatMap((g) => {
+        const t = eventTimes(g.event)
+        if (!t) return []
+        return [
+          {
+            id: `g:${g.calendarId}:${g.event.id}`,
+            title: g.event.summary ?? '(No title)',
+            start: t.start,
+            end: t.end,
+            allDay: t.allDay,
+            editable: g.writable,
+            classNames: ['lt-event', 'lt-event-google'],
+            extendedProps: { google: g },
+          },
+        ]
+      }),
+    ],
+    [items, google.events],
   )
 
   function saveMove(arg: EventDropArg | EventResizeDoneArg) {
+    const g = arg.event.extendedProps.google as GoogleEventItem | undefined
+    if (g) {
+      const start = arg.event.start!
+      const end = arg.event.end ?? new Date(start.getTime() + (arg.event.allDay ? 86_400_000 : 3_600_000))
+      google.moveEvent(g, start, end, arg.event.allDay).catch(() => arg.revert())
+      return
+    }
     const item = arg.event.extendedProps.item as CalendarItem
+    if (arg.event.allDay) {
+      // Dropped into the all-day row: it becomes a checklist item for that day.
+      dispatch({ type: 'task/update', id: item.taskId, patch: { dueDate: toISODate(arg.event.start!), dueTime: null, durationMin: null, reminderMin: null } })
+      return
+    }
     const start = arg.event.start!
     const end = arg.event.end ?? new Date(start.getTime() + (item.end.getTime() - item.start.getTime()))
     dispatch({
@@ -106,6 +144,7 @@ export function CalendarPage() {
             <h2 className="mr-auto min-w-0 truncate text-base font-semibold" aria-live="polite">
               {range?.title}
             </h2>
+            <GoogleStatusChip />
             <div className="w-full sm:w-64">
               <Segmented<ViewKey>
                 label="Calendar view"
@@ -131,7 +170,7 @@ export function CalendarPage() {
             scrollTime="07:00:00"
             slotDuration="00:30:00"
             snapDuration="00:15:00"
-            allDaySlot={false}
+            allDaySlot={googleOn}
             nowIndicator
             selectable
             selectMirror
@@ -143,7 +182,12 @@ export function CalendarPage() {
             navLinks
             navLinkDayClick={(date) => setSelected(toISODate(date))}
             events={events}
-            datesSet={(arg: DatesSetArg) => setRange({ from: toISODate(arg.start), to: addDays(toISODate(arg.end), -1), title: arg.view.title })}
+            datesSet={(arg: DatesSetArg) => {
+              const from = toISODate(arg.start)
+              const to = addDays(toISODate(arg.end), -1)
+              setRange({ from, to, title: arg.view.title })
+              google.setRange(from, to)
+            }}
             select={(arg: DateSelectArg) => {
               const day = toISODate(arg.start)
               setSelected(day)
@@ -152,7 +196,11 @@ export function CalendarPage() {
               setDraft({ day, start: timeOf(arg.start), durationMin: Math.max(15, Math.round((arg.end.getTime() - arg.start.getTime()) / 60_000)) })
             }}
             dateClick={(arg: DateClickArg) => arg.allDay && setSelected(toISODate(arg.date))}
-            eventClick={(arg: EventClickArg) => setOpenTaskId((arg.event.extendedProps.item as CalendarItem).taskId)}
+            eventClick={(arg: EventClickArg) => {
+              const g = arg.event.extendedProps.google as GoogleEventItem | undefined
+              if (g) setOpenEvent(g)
+              else setOpenTaskId((arg.event.extendedProps.item as CalendarItem).taskId)
+            }}
             eventDrop={saveMove}
             eventResize={saveMove}
             eventContent={(arg: EventContentArg) => <EventBody arg={arg} />}
@@ -170,13 +218,26 @@ export function CalendarPage() {
 
       <TimeBlockDialog draft={draft} onClose={() => setDraft(null)} />
       <TaskDetail taskId={openTaskId} today={today} onClose={() => setOpenTaskId(null)} />
+      <GoogleEventDialog item={openEvent} onClose={() => setOpenEvent(null)} />
     </>
   )
 }
 
 function EventBody({ arg }: { arg: EventContentArg }) {
   const item = arg.event.extendedProps.item as CalendarItem | undefined
+  const g = arg.event.extendedProps.google as GoogleEventItem | undefined
   const isMonth = arg.view.type === 'dayGridMonth'
+  if (g) {
+    return (
+      <div className="lt-event-body" style={{ '--lt-color': g.color } as CSSProperties}>
+        <span className="lt-event-title">
+          {isMonth && !arg.event.allDay && <span className="lt-event-time">{arg.timeText} </span>}
+          {arg.event.title}
+        </span>
+        {!isMonth && !arg.event.allDay && <span className="lt-event-time">{arg.timeText}</span>}
+      </div>
+    )
+  }
   if (!item) {
     // The preview block shown while you drag to create something new.
     return (
@@ -199,6 +260,8 @@ function EventBody({ arg }: { arg: EventContentArg }) {
 }
 
 function DayNumber({ arg, count }: { arg: DayCellContentArg; count: number }) {
+  // Only month view shows day numbers in cells (the week view's all-day row has none).
+  if (arg.view.type !== 'dayGridMonth') return null
   return (
     <span className="flex items-center gap-1">
       {count > 0 && (

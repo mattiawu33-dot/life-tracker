@@ -1,5 +1,6 @@
 import { PageHeader } from '../components/ui/PageHeader'
 import { Segmented } from '../components/ui/Segmented'
+import { GoogleSettings } from '../features/google/components/GoogleSettings'
 import { TrainerSettings } from '../features/trainer/components/TrainerSettings'
 import { useTheme, type ThemePreference } from '../theme/theme'
 
@@ -22,6 +23,7 @@ export function SettingsPage() {
             ]}
           />
         </section>
+        <GoogleSettings />
         <TrainerSettings />
       </div>
     </>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { ChatMessage, ModelTier, TrainerEvent, TrainerRequest } from '../../../shared/trainer'
 import { load, save } from '../../lib/storage'
 import { useToday } from '../../lib/useToday'
+import { useGoogle } from '../google/context'
 import { useHabits } from '../habits/store'
 import { useTasks } from '../tasks/store'
 import { fetchStatus, requestChat, requestText, TrainerError } from './api'
@@ -18,6 +19,7 @@ export function TrainerProvider({ children }: { children: ReactNode }) {
   const { state: taskState } = useTasks()
   const { state: habitState } = useHabits()
   const today = useToday()
+  const { eventsOn } = useGoogle()
   const [settings, setSettings] = useState<TrainerSettings>(() => ({ ...DEFAULT_SETTINGS, ...load('trainer:settings', {}) }))
   const [status, setStatus] = useState<StatusState>({ state: 'idle' })
   const [usage, setUsage] = useState(() => load('trainer:usage', { date: '', count: 0 }))
@@ -74,8 +76,8 @@ export function TrainerProvider({ children }: { children: ReactNode }) {
   )
 
   const snapshot = useCallback(
-    () => buildSnapshot(taskState.tasks, taskState.lists, habitState.habits, today),
-    [taskState, habitState, today],
+    () => buildSnapshot(taskState.tasks, taskState.lists, habitState.habits, today, eventsOn(today)),
+    [taskState, habitState, today, eventsOn],
   )
 
   const morningPlan = useCallback(

@@ -17,6 +17,8 @@ export function makeTask(fields: Partial<Task> & { title: string }): Task {
     reminderMin: null,
     order: Date.now(),
     rolledFrom: null,
+    google: null,
+    googleSync: true,
     subtasks: [],
     recurrence: null,
     completedAt: null,
@@ -37,6 +39,8 @@ export function upgradeTask(t: Partial<Task> & Pick<Task, 'id' | 'title' | 'crea
     durationMin: null,
     reminderMin: null,
     rolledFrom: null,
+    google: null,
+    googleSync: true,
     ...t,
     order: t.order ?? new Date(t.createdAt).getTime(),
   } as Task

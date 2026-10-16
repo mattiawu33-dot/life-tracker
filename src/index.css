@@ -299,3 +299,10 @@ body {
 .fc .fc-highlight {
   border-radius: 6px;
 }
+/* Google events: a little more solid, like Google Calendar, so they read as "from Google". */
+.fc .lt-event-google .lt-event-body {
+  background: color-mix(in srgb, var(--lt-color) 32%, var(--surface));
+}
+.fc .fc-timegrid-axis-cushion {
+  font-size: 0.625rem;
+}

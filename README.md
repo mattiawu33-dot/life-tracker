@@ -95,9 +95,75 @@ src/
 3. ✅ Habits with streaks
 4. XP, levels, daily goal, streak freezes
 5. Today dashboard tying it together
-6. Calendar: ✅ day/week/month views, time blocks, daily checklists, reminders; next: Google Calendar two-way sync
+6. ✅ Calendar: day/week/month views, time blocks, daily checklists, reminders, Google Calendar two-way sync
 7. Polish: animations, weekly recap, stats
 8. ✅ AI trainer (optional, any AI provider), built early
+
+## Google Calendar sync
+
+Two-way sync that runs entirely in your browser: no server, no client secret.
+
+- Your Google events appear on the Calendar page, colored by calendar. Drag,
+  resize, rename or delete them (on calendars you can edit).
+- Items you give a time in the app become Google events in the calendar you
+  pick, with their reminder set on the event, so **Google sends the
+  notification**. Repeating items become repeating events.
+- Edits made in Google to those events come back into the app. If an item
+  changed on both sides, the app's not-yet-sent change wins.
+- Delete an app item's event in Google and the item stays in the app, with
+  "Add to Google Calendar" switched off. You can switch it per item in the
+  item's details.
+- Items without a time (the daily checklist) stay in the app.
+
+**About signing in.** Google gives browser-only apps a pass that lasts about an
+hour. After that, sync pauses and a **Reconnect Google** button appears. One
+click (no password, usually) and anything you changed meanwhile is sent.
+
+Code: `src/features/google/` (`mapping.ts` = task <-> event conversions,
+`GoogleProvider.tsx` = the sync engine, `api.ts` = Calendar API calls,
+`gis.ts` = Google sign-in).
+
+### Google Cloud setup (one time, about 10 minutes)
+
+You need a free Google Cloud project that says "this app may ask for calendar
+access". Use the Google account whose calendar you want to sync.
+
+1. **Create a project.** Go to [console.cloud.google.com](https://console.cloud.google.com),
+   click the project picker at the top -> **New project**, name it
+   `Life Tracker`, **Create**, then make sure it's selected.
+2. **Turn on the Calendar API.** Menu -> **APIs & Services -> Library**, search
+   **Google Calendar API**, open it, click **Enable**.
+3. **Set up the consent screen** (what you see when you click Connect). Menu ->
+   **Google Auth Platform** (older consoles: **APIs & Services -> OAuth consent screen**):
+   - **Branding**: app name `Life Tracker`, your email as support and developer contact. Save.
+   - **Audience**: user type **External**, leave it in **Testing**, and under
+     **Test users** add your own Gmail address. (Only test users can sign in;
+     that's fine for a personal app.)
+   - **Data access**: **Add or remove scopes**, tick
+     `.../auth/calendar.events` and `.../auth/calendar.calendarlist.readonly`, save.
+4. **Create the Client ID.** **Clients** (older: **Credentials -> Create
+   credentials -> OAuth client ID**) -> **Create client**:
+   - Application type: **Web application**, name `Life Tracker web`.
+   - **Authorized JavaScript origins**, add:
+     - `http://localhost:5173` (local `npm run dev`)
+     - `https://YOUR-PROJECT.vercel.app` (your Vercel address, no trailing slash)
+     - any custom domain you add later
+   - **Authorized redirect URIs**: leave empty (the popup flow doesn't use them).
+   - **Create**, then copy the **Client ID** (ends in `.apps.googleusercontent.com`).
+     You don't need the client secret; don't put it anywhere.
+5. **Add it to the app.**
+   - Locally: in `.env.local`, add `VITE_GOOGLE_CLIENT_ID=<your client id>`, restart `npm run dev`.
+   - On Vercel: Project -> **Settings -> Environment Variables**, add
+     `VITE_GOOGLE_CLIENT_ID` for Production (and Preview if you use it), then
+     **Redeploy**. `VITE_` variables are built into the app, so a redeploy is required.
+6. **Connect.** In the app: Settings -> Google Calendar -> **Connect**. Because the
+   app is in Testing, Google shows "Google hasn't verified this app": click
+   **Continue** (it's your own app). Allow both calendar permissions.
+
+The Client ID isn't a secret (every "Sign in with Google" button on the web
+shows one), but only the origins you listed can use it. Vercel preview
+deployments get their own URLs; add one as an origin if you want to test
+sign-in there.
 
 ## AI trainer
 

@@ -11,6 +11,7 @@ import { toggleDay } from '../actions'
 import { viewForList } from '../selectors'
 import { useTasks } from '../store'
 import { askForNotifications } from '../../../lib/notifications'
+import { useGoogle } from '../../google/context'
 import { DEFAULT_DURATION_MIN, DURATION_OPTIONS, REMINDER_OPTIONS } from '../timing'
 import { EFFORT_XP, type Effort, type Priority, type Task } from '../types'
 import { RepeatEditor } from './RepeatEditor'
@@ -66,6 +67,8 @@ function TaskForm({ task, today, onClose }: { task: Task; today: ISODate; onClos
   const [newSubtask, setNewSubtask] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const update = (patch: Partial<Task>) => dispatch({ type: 'task/update', id: task.id, patch })
+  const google = useGoogle()
+  const googleOn = google.settings.connected && google.settings.pushTasks && google.status !== 'not-configured'
   const view = viewForList(task, today)
 
   function addSubtask() {
@@ -175,6 +178,27 @@ function TaskForm({ task, today, onClose }: { task: Task; today: ISODate; onClos
             </select>
           </Field>
         </div>
+      )}
+
+      {task.dueTime && googleOn && (
+        <label className="-mt-1 flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-surface-2/60 px-4 py-3 text-sm">
+          <span>
+            <span className="block font-medium">Add to Google Calendar</span>
+            <span className="block text-xs text-ink-muted">
+              {task.google ? 'Synced. Changes here and in Google stay in step.' : task.googleSync ? 'Will sync shortly.' : 'Kept in this app only.'}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={task.googleSync}
+            aria-label="Add to Google Calendar"
+            onClick={() => update({ googleSync: !task.googleSync })}
+            className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${task.googleSync ? 'bg-accent' : 'bg-line'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${task.googleSync ? 'translate-x-4' : ''}`} />
+          </button>
+        </label>
       )}
 
       <Field label="Priority">

@@ -1,4 +1,4 @@
-import type { DaySnapshot, TaskSummary, WeekSummary } from '../../../shared/trainer'
+import type { DaySnapshot, EventSummary, TaskSummary, WeekSummary } from '../../../shared/trainer'
 import { addDays, daysBetween, formatTime, fromISODate, toISODate, type ISODate } from '../../lib/dates'
 import { describeSchedule, firstDay, isDueToday, isScheduled, isWeekly, streakInfo } from '../habits/streaks'
 import type { Habit } from '../habits/types'
@@ -18,7 +18,14 @@ function completedOn(task: Task, day: ISODate): number {
   return task.completedAt && toISODate(new Date(task.completedAt)) === day ? 1 : 0
 }
 
-export function buildSnapshot(tasks: Task[], lists: TaskList[], habits: Habit[], today: ISODate, now = new Date()): DaySnapshot {
+export function buildSnapshot(
+  tasks: Task[],
+  lists: TaskList[],
+  habits: Habit[],
+  today: ISODate,
+  events: EventSummary[] = [],
+  now = new Date(),
+): DaySnapshot {
   const listName = (id: string | null) => lists.find((l) => l.id === id)?.name
   const views = tasks.map((t) => viewForList(t, today)).filter((v) => !v.done)
   const dated = views.filter((v) => v.date && daysBetween(today, v.date) <= 7).sort(compareViews)
@@ -51,7 +58,7 @@ export function buildSnapshot(tasks: Task[], lists: TaskList[], habits: Habit[],
         streakUnit: s.unit,
       }
     }),
-    events: [], // Google Calendar events arrive in step 6
+    events,
   }
 }
 

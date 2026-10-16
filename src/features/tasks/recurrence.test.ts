@@ -25,6 +25,8 @@ const task = (r: Partial<Recurrence>, completions: Record<string, string> = {}):
   reminderMin: null,
   order: 0,
   rolledFrom: null,
+  google: null,
+  googleSync: true,
   subtasks: [],
   recurrence: rec(r),
   completedAt: null,

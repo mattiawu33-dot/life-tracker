@@ -51,6 +51,15 @@ export interface Recurrence {
   stoppedOn: ISODate | null
 }
 
+export interface GoogleLink {
+  eventId: string
+  calendarId: string
+  /** Fingerprint of the synced fields at the last sync; differs = local change to push. */
+  hash: string
+  /** Google's `updated` timestamp at the last sync; differs = change made in Google. */
+  updated: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -70,6 +79,10 @@ export interface Task {
   order: number
   /** Set when an unfinished item was rolled over from an earlier day. */
   rolledFrom: ISODate | null
+  /** Link to the Google Calendar event this item is synced with. */
+  google: GoogleLink | null
+  /** Put this item on Google Calendar (when it has a time and Google is connected). */
+  googleSync: boolean
   subtasks: Subtask[]
   recurrence: Recurrence | null
   /** One-off tasks: when it was checked off (ISO timestamp). */
