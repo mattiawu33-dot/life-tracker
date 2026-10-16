@@ -11,13 +11,14 @@
     <!--
       Runs before React loads so the page never "flashes" the wrong theme.
       It reads the saved choice (light / dark / system) and adds the `dark`
-      class to <html> if needed. Keep the storage key in sync with
-      src/theme/theme.ts.
+      class to <html> if needed. Keep the logic in sync with src/theme/.
     -->
     <script>
       try {
         var pref = JSON.parse(localStorage.getItem('lt:theme')) || 'system';
-        var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        var host = document.documentElement.getAttribute('data-theme');
+        var systemDark = host === 'dark' || host === 'light' ? host === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = pref === 'dark' || (pref === 'system' && systemDark);
         if (dark) document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>

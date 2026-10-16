@@ -22,6 +22,7 @@ To try it on your phone, run `npm run dev -- --host` and open the
 | `npm run build`   | Type-check + production build into `dist/`     |
 | `npm run preview` | Serve the production build locally             |
 | `npm run lint`    | Lint with oxlint                               |
+| `npm test`        | Run the unit tests (Vitest)                    |
 
 ## How the code is organized
 
@@ -33,9 +34,18 @@ src/
   theme/                Light / dark / system theme: state, provider, toggle button
   components/
     layout/             AppShell (the frame), Sidebar (desktop), BottomTabBar (phone)
-    ui/                 Small reusable pieces: Card, PageHeader, ComingSoon
+    ui/                 Reusable pieces: Card, Dialog, Checkbox, Segmented, Field...
+  features/
+    tasks/              Everything about tasks:
+      types.ts            The shape of a Task, TaskList and Recurrence
+      store.ts            The reducer: every change to tasks/lists goes through here
+      TasksProvider.tsx   Loads from / saves to localStorage
+      recurrence.ts       Repeat rules (which days a task occurs on) + tests
+      quickAdd.ts         "bio essay friday #school !high" -> a task + tests
+      selectors.ts        Grouping into Overdue / Today / Tomorrow / ...
+      components/         QuickAddBar, TaskRow, TaskDetail, RepeatEditor, ListChips, ListDialog
   pages/                One file per tab: Today, Tasks, Calendar, Habits, Stats
-  lib/                  Plain helpers with no UI: storage.ts (localStorage), dates.ts
+  lib/                  Plain helpers with no UI: storage, dates, ids, useToday
 ```
 
 ### Key ideas
@@ -48,13 +58,21 @@ src/
   sidebar.
 - **No theme flash.** A tiny script in `index.html` applies the saved theme
   before React loads, so dark-mode users never see a white flash.
-- **Storage.** `lib/storage.ts` prefixes every key with `lt:` and stores JSON,
-  so later steps can save tasks and habits with `save('tasks', tasks)`.
+- **Storage.** `lib/storage.ts` prefixes every key with `lt:` and stores JSON.
+  Tasks and lists are saved under `lt:tasks` after every change.
+- **Days are strings.** A due date is stored as `"2026-10-30"`, not a full
+  timestamp, so a task due Friday stays on Friday in any time zone.
+- **Reducer pattern.** Components never edit tasks directly. They `dispatch`
+  an action like `{ type: 'task/toggle', id }`, and `store.ts` makes the change.
+- **Recurring tasks** show one occurrence at a time: the most recent one
+  that's due (today or overdue), or else the next upcoming one. Older missed
+  occurrences are skipped instead of piling up. "Stop repeating" ends the
+  task but keeps every past completion.
 
 ## Roadmap
 
 1. ✅ Project setup + layout shell (navigation, theme, dark mode)
-2. Tasks with quick-add and lists
+2. ✅ Tasks with quick-add and lists
 3. Habits with streaks
 4. XP, levels, daily goal, streak freezes
 5. Today dashboard tying it together
