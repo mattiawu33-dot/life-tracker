@@ -13,6 +13,10 @@ export function makeTask(fields: Partial<Task> & { title: string }): Task {
     effort: 'small',
     dueDate: null,
     dueTime: null,
+    durationMin: null,
+    reminderMin: null,
+    order: Date.now(),
+    rolledFrom: null,
     subtasks: [],
     recurrence: null,
     completedAt: null,
@@ -25,4 +29,15 @@ export function makeTask(fields: Partial<Task> & { title: string }): Task {
 /** Which occurrence a checkbox in the task list should toggle. */
 export function toggleDay(task: Task, today: ISODate = todayISO()): ISODate | null {
   return task.recurrence ? currentOccurrence(task, today) : null
+}
+
+/** Fills in fields added after a task was saved, so older data keeps working. */
+export function upgradeTask(t: Partial<Task> & Pick<Task, 'id' | 'title' | 'createdAt'>): Task {
+  return {
+    durationMin: null,
+    reminderMin: null,
+    rolledFrom: null,
+    ...t,
+    order: t.order ?? new Date(t.createdAt).getTime(),
+  } as Task
 }

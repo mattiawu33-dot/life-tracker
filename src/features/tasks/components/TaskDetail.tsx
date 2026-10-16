@@ -10,6 +10,8 @@ import { newId } from '../../../lib/id'
 import { toggleDay } from '../actions'
 import { viewForList } from '../selectors'
 import { useTasks } from '../store'
+import { askForNotifications } from '../../../lib/notifications'
+import { DEFAULT_DURATION_MIN, DURATION_OPTIONS, REMINDER_OPTIONS } from '../timing'
 import { EFFORT_XP, type Effort, type Priority, type Task } from '../types'
 import { RepeatEditor } from './RepeatEditor'
 
@@ -134,6 +136,46 @@ function TaskForm({ task, today, onClose }: { task: Task; today: ISODate; onClos
           </div>
         )}
       </div>
+
+      {task.dueTime && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Duration" htmlFor="task-duration">
+            <select
+              id="task-duration"
+              value={task.durationMin ?? DEFAULT_DURATION_MIN}
+              onChange={(e) => update({ durationMin: Number(e.target.value) })}
+              className={inputClass}
+            >
+              {DURATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+              {task.durationMin && !DURATION_OPTIONS.some((o) => o.value === task.durationMin) && (
+                <option value={task.durationMin}>{task.durationMin} min</option>
+              )}
+            </select>
+          </Field>
+          <Field label="Reminder" htmlFor="task-reminder">
+            <select
+              id="task-reminder"
+              value={task.reminderMin ?? ''}
+              onChange={(e) => {
+                const v = e.target.value === '' ? null : Number(e.target.value)
+                update({ reminderMin: v })
+                if (v !== null) askForNotifications()
+              }}
+              className={inputClass}
+            >
+              {REMINDER_OPTIONS.map((o) => (
+                <option key={o.label} value={o.value ?? ''}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      )}
 
       <Field label="Priority">
         <Segmented label="Priority" value={task.priority} options={PRIORITY_OPTIONS} onChange={(priority) => update({ priority })} />

@@ -166,3 +166,136 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+  CALENDAR (FullCalendar)
+  -----------------------
+  FullCalendar reads its colors from --fc-* variables. We point them at our
+  design tokens so the calendar matches the app in light and dark mode.
+*/
+.fc {
+  --fc-border-color: var(--line);
+  --fc-page-bg-color: var(--surface);
+  --fc-neutral-bg-color: var(--surface-2);
+  --fc-neutral-text-color: var(--ink-muted);
+  --fc-today-bg-color: transparent;
+  --fc-now-indicator-color: var(--danger);
+  --fc-highlight-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--ink);
+  --fc-event-selected-overlay-color: transparent;
+  --fc-more-link-bg-color: transparent;
+  --fc-more-link-text-color: var(--accent-ink);
+  --fc-small-font-size: 0.75rem;
+  font-size: 0.8125rem;
+}
+.fc a {
+  color: inherit;
+  text-decoration: none;
+}
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid > tbody > tr > td,
+.fc .fc-scrollgrid > thead > tr > th {
+  border: none;
+}
+.fc .fc-col-header-cell {
+  border-bottom: 1px solid var(--line);
+}
+.fc .fc-col-header-cell-cushion {
+  color: var(--ink-muted);
+  font-weight: 500;
+  padding: 6px 2px;
+}
+.fc .fc-timegrid-slot {
+  height: 2.4em;
+}
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dotted;
+}
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  color: var(--ink-subtle);
+  font-size: 0.6875rem;
+}
+.fc .fc-daygrid-day-number {
+  color: var(--ink);
+  padding: 6px;
+}
+.fc .fc-day-other .fc-daygrid-day-top {
+  opacity: 0.4;
+}
+.fc .lt-selected-day,
+.fc .fc-col-header-cell.lt-selected-day {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.fc .lt-today-number {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.fc .lt-open-count {
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+}
+/* Events: soft tint of the list color with a solid edge. */
+.fc .lt-event {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.fc .lt-event-body {
+  display: flex;
+  height: 100%;
+  min-height: 1.2rem;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 3px solid var(--lt-color);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--lt-color) 20%, var(--surface));
+  color: var(--ink);
+  padding: 2px 6px;
+}
+.fc-daygrid-event .lt-event-body {
+  flex-direction: row;
+  min-height: 0;
+  padding: 1px 6px;
+}
+.fc .lt-event-title {
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fc-timegrid-event .lt-event-title {
+  white-space: normal;
+}
+.fc .lt-event-time {
+  color: var(--ink-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+.fc .lt-event-done .lt-event-body {
+  opacity: 0.55;
+}
+.fc .lt-event-done .lt-event-title {
+  text-decoration: line-through;
+}
+.fc .fc-timegrid-event-harness-inset .fc-timegrid-event {
+  box-shadow: 0 0 0 1px var(--surface);
+}
+.fc .fc-highlight {
+  border-radius: 6px;
+}

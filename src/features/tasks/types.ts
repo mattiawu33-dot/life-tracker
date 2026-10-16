@@ -62,6 +62,14 @@ export interface Task {
   dueDate: ISODate | null
   /** "16:00", or null for "any time that day". Applies to every occurrence. */
   dueTime: string | null
+  /** Length of a timed item in minutes (shown as a block on the calendar). */
+  durationMin: number | null
+  /** Remind this many minutes before the start time (timed items only). */
+  reminderMin: number | null
+  /** Position in the day's checklist (lower comes first). */
+  order: number
+  /** Set when an unfinished item was rolled over from an earlier day. */
+  rolledFrom: ISODate | null
   subtasks: Subtask[]
   recurrence: Recurrence | null
   /** One-off tasks: when it was checked off (ISO timestamp). */

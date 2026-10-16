@@ -1,160 +1,223 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import type { DatesSetArg, DateSelectArg, DayCellContentArg, DayHeaderContentArg, EventClickArg, EventContentArg, EventDropArg } from '@fullcalendar/core'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin, { type DateClickArg, type EventResizeDoneArg } from '@fullcalendar/interaction'
+import FullCalendar from '@fullcalendar/react'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import { Check, ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { PageHeader } from '../components/ui/PageHeader'
-import { QuickAddBar } from '../features/tasks/components/QuickAddBar'
+import { Segmented } from '../components/ui/Segmented'
+import { DayChecklist } from '../features/calendar/components/DayChecklist'
+import { TimeBlockDialog, type BlockDraft } from '../features/calendar/components/TimeBlockDialog'
+import { calendarItems, openCounts, timeOf, type CalendarItem } from '../features/calendar/items'
 import { TaskDetail } from '../features/tasks/components/TaskDetail'
-import { TaskRow } from '../features/tasks/components/TaskRow'
-import { LIST_COLORS } from '../features/tasks/listColors'
-import { compareViews, viewForDay, type TaskView } from '../features/tasks/selectors'
 import { useTasks } from '../features/tasks/store'
-import { addDays, fromISODate, startOfWeek, toISODate, type ISODate } from '../lib/dates'
+import { addDays, toISODate, type ISODate } from '../lib/dates'
+import { useMediaQuery } from '../lib/useMediaQuery'
+import { useSetting } from '../lib/useSetting'
 import { useToday } from '../lib/useToday'
 
-const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+type ViewKey = 'day' | 'week' | 'month'
 
-/** Month grid of your tasks. Google Calendar events join in step 6. */
+/** On phones, "Week" shows 3 days at a time so the columns stay readable. */
+function fcView(key: ViewKey, wide: boolean) {
+  return key === 'day' ? 'timeGridDay' : key === 'month' ? 'dayGridMonth' : wide ? 'timeGridWeek' : 'timeGridThreeDay'
+}
+
+/**
+ * Google Calendar-style calendar. Timed items are blocks on the grid (drag to
+ * create, drag or resize to change). Items without a time live in each day's
+ * checklist, shown beside the calendar for the selected day.
+ */
 export function CalendarPage() {
-  const { state } = useTasks()
+  const { state, dispatch } = useTasks()
   const today = useToday()
+  const wide = useMediaQuery('(min-width: 640px)')
+  const calRef = useRef<FullCalendar>(null)
+  const [viewKey, setViewKey] = useSetting<ViewKey>('calendar:view', 'week')
   const [selected, setSelected] = useState<ISODate>(today)
-  const [month, setMonth] = useState(() => today.slice(0, 7)) // "2026-10"
+  const [range, setRange] = useState<{ from: ISODate; to: ISODate; title: string } | null>(null)
+  const [draft, setDraft] = useState<BlockDraft | null>(null)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
 
-  const days = useMemo(() => {
-    const first = `${month}-01`
-    const nextMonth = fromISODate(first)
-    nextMonth.setMonth(nextMonth.getMonth() + 1)
-    const last = addDays(toISODate(nextMonth), -1)
-    const out: ISODate[] = []
-    for (let d = startOfWeek(first); d <= last || out.length % 7 !== 0; d = addDays(d, 1)) out.push(d)
-    return out
-  }, [month])
+  // Switch the calendar when the view button (or screen width) changes.
+  useEffect(() => {
+    calRef.current?.getApi().changeView(fcView(viewKey, wide))
+  }, [viewKey, wide])
 
-  const entries = useMemo(() => {
-    const map = new Map<ISODate, TaskView[]>()
-    for (const day of days) {
-      const views = state.tasks.map((t) => viewForDay(t, day, today)).filter((v): v is TaskView => v !== null)
-      map.set(day, views.sort(compareViews))
-    }
-    return map
-  }, [days, state.tasks, today])
+  const items = useMemo(
+    () => (range ? calendarItems(state.tasks, state.lists, range.from, range.to, today) : []),
+    [state.tasks, state.lists, range, today],
+  )
+  const counts = useMemo(() => (range ? openCounts(state.tasks, range.from, range.to, today) : new Map<ISODate, number>()), [state.tasks, range, today])
 
-  const selectedViews =
-    entries.get(selected) ??
-    state.tasks.map((t) => viewForDay(t, selected, today)).filter((v): v is TaskView => v !== null).sort(compareViews)
+  const events = useMemo(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        start: item.start,
+        end: item.end,
+        editable: !item.repeating,
+        classNames: ['lt-event', ...(item.done ? ['lt-event-done'] : [])],
+        extendedProps: { item },
+      })),
+    [items],
+  )
 
-  function shiftMonth(delta: number) {
-    const d = fromISODate(`${month}-01`)
-    d.setMonth(d.getMonth() + delta)
-    setMonth(toISODate(d).slice(0, 7))
+  function saveMove(arg: EventDropArg | EventResizeDoneArg) {
+    const item = arg.event.extendedProps.item as CalendarItem
+    const start = arg.event.start!
+    const end = arg.event.end ?? new Date(start.getTime() + (item.end.getTime() - item.start.getTime()))
+    dispatch({
+      type: 'task/update',
+      id: item.taskId,
+      patch: { dueDate: toISODate(start), dueTime: timeOf(start), durationMin: Math.max(15, Math.round((end.getTime() - start.getTime()) / 60_000)) },
+    })
   }
 
-  const monthLabel = fromISODate(`${month}-01`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-  const colorOf = (v: TaskView) => {
-    const list = state.lists.find((l) => l.id === v.task.listId)
-    return list ? LIST_COLORS[list.color].hex : 'var(--accent)'
-  }
+  const isGrid = viewKey !== 'month'
+  const api = () => calRef.current?.getApi()
 
   return (
     <>
       <PageHeader title="Calendar" />
-
-      <div className="flex flex-col gap-5">
-        <section className="rounded-card bg-surface p-3 shadow-card md:p-5">
-          <div className="mb-3 flex items-center gap-1 px-1">
-            <h2 className="mr-auto text-base font-semibold">{monthLabel}</h2>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <section className="min-w-0 flex-1 rounded-card bg-surface p-2 shadow-card sm:p-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
+            <div className="flex items-center">
+              <button type="button" aria-label="Previous" onClick={() => api()?.prev()} className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink">
+                <ChevronLeft className="size-5" />
+              </button>
+              <button type="button" aria-label="Next" onClick={() => api()?.next()} className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink">
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => {
-                setMonth(today.slice(0, 7))
+                api()?.today()
                 setSelected(today)
               }}
               className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-soft"
             >
               Today
             </button>
-            <button type="button" aria-label="Previous month" onClick={() => shiftMonth(-1)} className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink">
-              <ChevronLeft className="size-5" />
-            </button>
-            <button type="button" aria-label="Next month" onClick={() => shiftMonth(1)} className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink">
-              <ChevronRight className="size-5" />
-            </button>
+            <h2 className="mr-auto min-w-0 truncate text-base font-semibold" aria-live="polite">
+              {range?.title}
+            </h2>
+            <div className="w-full sm:w-64">
+              <Segmented<ViewKey>
+                label="Calendar view"
+                value={viewKey}
+                onChange={setViewKey}
+                options={[
+                  { value: 'day', label: 'Day' },
+                  { value: 'week', label: wide ? 'Week' : '3 days' },
+                  { value: 'month', label: 'Month' },
+                ]}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 text-center text-xs font-medium text-ink-subtle">
-            {WEEKDAY_HEADERS.map((d) => (
-              <div key={d} className="pb-2">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5">
-            {days.map((day) => {
-              const views = entries.get(day) ?? []
-              const inMonth = day.startsWith(month)
-              const isToday = day === today
-              const isSelected = day === selected
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => setSelected(day)}
-                  aria-pressed={isSelected}
-                  aria-label={`${fromISODate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}, ${views.length} task${views.length === 1 ? '' : 's'}`}
-                  className={`flex min-h-14 flex-col items-center gap-1 rounded-xl px-0.5 pt-1.5 pb-1 transition-colors md:min-h-24 md:items-stretch md:px-1.5 ${
-                    isSelected ? 'bg-accent-soft' : 'hover:bg-surface-2'
-                  }`}
-                >
-                  <span
-                    className={`grid size-7 place-items-center rounded-full text-sm tabular-nums md:self-start ${
-                      isToday ? 'bg-accent font-semibold text-on-accent' : inMonth ? 'text-ink' : 'text-ink-subtle/70'
-                    }`}
-                  >
-                    {Number(day.slice(8))}
-                  </span>
-                  {/* Phones: colored dots. Desktop: the first two titles. */}
-                  <span className="flex gap-0.5 md:hidden">
-                    {views.slice(0, 3).map((v) => (
-                      <span key={v.task.id} className={`size-1.5 rounded-full ${v.done ? 'opacity-35' : ''}`} style={{ background: colorOf(v) }} />
-                    ))}
-                  </span>
-                  <span className="hidden min-w-0 flex-col gap-0.5 md:flex">
-                    {views.slice(0, 2).map((v) => (
-                      <span
-                        key={v.task.id}
-                        className={`truncate rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight ${v.done ? 'text-ink-subtle line-through' : 'text-ink'}`}
-                        style={{ background: `color-mix(in srgb, ${colorOf(v)} 16%, transparent)` }}
-                      >
-                        {v.task.title}
-                      </span>
-                    ))}
-                    {views.length > 2 && <span className="px-1.5 text-left text-[11px] text-ink-muted">+{views.length - 2} more</span>}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <FullCalendar
+            ref={calRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView={fcView(viewKey, wide)}
+            views={{ timeGridThreeDay: { type: 'timeGrid', duration: { days: 3 } } }}
+            headerToolbar={false}
+            firstDay={1}
+            height={isGrid ? (wide ? 720 : 620) : 'auto'}
+            scrollTime="07:00:00"
+            slotDuration="00:30:00"
+            snapDuration="00:15:00"
+            allDaySlot={false}
+            nowIndicator
+            selectable
+            selectMirror
+            selectLongPressDelay={300}
+            eventLongPressDelay={300}
+            editable
+            eventDurationEditable
+            dayMaxEvents={3}
+            navLinks
+            navLinkDayClick={(date) => setSelected(toISODate(date))}
+            events={events}
+            datesSet={(arg: DatesSetArg) => setRange({ from: toISODate(arg.start), to: addDays(toISODate(arg.end), -1), title: arg.view.title })}
+            select={(arg: DateSelectArg) => {
+              const day = toISODate(arg.start)
+              setSelected(day)
+              arg.view.calendar.unselect()
+              if (arg.allDay) return // month view: just pick the day
+              setDraft({ day, start: timeOf(arg.start), durationMin: Math.max(15, Math.round((arg.end.getTime() - arg.start.getTime()) / 60_000)) })
+            }}
+            dateClick={(arg: DateClickArg) => arg.allDay && setSelected(toISODate(arg.date))}
+            eventClick={(arg: EventClickArg) => setOpenTaskId((arg.event.extendedProps.item as CalendarItem).taskId)}
+            eventDrop={saveMove}
+            eventResize={saveMove}
+            eventContent={(arg: EventContentArg) => <EventBody arg={arg} />}
+            dayCellClassNames={(arg) => (toISODate(arg.date) === selected ? ['lt-selected-day'] : [])}
+            dayHeaderClassNames={(arg) => (isGrid && toISODate(arg.date) === selected ? ['lt-selected-day'] : [])}
+            dayCellContent={(arg: DayCellContentArg) => <DayNumber arg={arg} count={counts.get(toISODate(arg.date)) ?? 0} />}
+            dayHeaderContent={(arg: DayHeaderContentArg) => <DayHeader arg={arg} isGrid={isGrid} count={counts.get(toISODate(arg.date)) ?? 0} />}
+          />
         </section>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="px-1 text-sm font-semibold text-ink-muted">
-            {selected === today ? 'Today, ' : ''}
-            {fromISODate(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </h2>
-          <QuickAddBar defaultDate={selected} placeholder="Add a task for this day" />
-          {selectedViews.length > 0 ? (
-            <ul className="rounded-card bg-surface p-1.5 shadow-card">
-              {selectedViews.map((v) => (
-                <TaskRow key={v.task.id} view={v} today={today} onOpen={setOpenTaskId} hideDate />
-              ))}
-            </ul>
-          ) : (
-            <p className="px-1 text-sm text-ink-muted">Nothing planned for this day.</p>
-          )}
-        </section>
+        <div className="lg:sticky lg:top-6 lg:w-80 lg:shrink-0">
+          <DayChecklist day={selected} today={today} onOpenTask={setOpenTaskId} />
+        </div>
       </div>
 
+      <TimeBlockDialog draft={draft} onClose={() => setDraft(null)} />
       <TaskDetail taskId={openTaskId} today={today} onClose={() => setOpenTaskId(null)} />
     </>
+  )
+}
+
+function EventBody({ arg }: { arg: EventContentArg }) {
+  const item = arg.event.extendedProps.item as CalendarItem | undefined
+  const isMonth = arg.view.type === 'dayGridMonth'
+  if (!item) {
+    // The preview block shown while you drag to create something new.
+    return (
+      <div className="lt-event-body" style={{ '--lt-color': 'var(--accent)' } as CSSProperties}>
+        <span className="lt-event-time">{arg.timeText}</span>
+      </div>
+    )
+  }
+  return (
+    <div className="lt-event-body" style={{ '--lt-color': item.color } as CSSProperties}>
+      <span className="lt-event-title">
+        {item.done && <Check className="mr-0.5 inline size-3" strokeWidth={3} />}
+        {isMonth && <span className="lt-event-time">{arg.timeText} </span>}
+        {item.title}
+        {item.repeating && <Repeat className="ml-1 inline size-3 opacity-60" aria-label="repeats" />}
+      </span>
+      {!isMonth && <span className="lt-event-time">{arg.timeText}</span>}
+    </div>
+  )
+}
+
+function DayNumber({ arg, count }: { arg: DayCellContentArg; count: number }) {
+  return (
+    <span className="flex items-center gap-1">
+      {count > 0 && (
+        <span className="lt-open-count" title={`${count} open checklist item${count === 1 ? '' : 's'}`}>
+          {count}
+        </span>
+      )}
+      <span className={arg.isToday ? 'lt-today-number' : ''}>{arg.dayNumberText}</span>
+    </span>
+  )
+}
+
+function DayHeader({ arg, isGrid, count }: { arg: DayHeaderContentArg; isGrid: boolean; count: number }) {
+  if (!isGrid) return <span>{arg.date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+  return (
+    <span className="flex flex-col items-center gap-0.5 py-0.5">
+      <span className="text-[11px] tracking-wide uppercase">{arg.date.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+      <span className={`text-base font-semibold tabular-nums ${arg.isToday ? 'lt-today-number' : 'text-ink'}`}>{arg.date.getDate()}</span>
+      {count > 0 ? <span className="lt-open-count">{count} open</span> : <span className="h-4" />}
+    </span>
   )
 }

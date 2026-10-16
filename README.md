@@ -73,6 +73,16 @@ src/
   that's due (today or overdue), or else the next upcoming one. Older missed
   occurrences are skipped instead of piling up. "Stop repeating" ends the
   task but keeps every past completion.
+- **Calendar = tasks.** An item with a time is a block on the calendar's
+  time grid (drag to create, drag or resize to change). An item without a
+  time goes into that day's checklist, shown beside the calendar. Built on
+  [FullCalendar](https://fullcalendar.io) v6, themed through its `--fc-*`
+  CSS variables in `src/index.css`. Unfinished checklist items can roll over
+  to the next day.
+- **Reminders.** Timed items can have a reminder (at start, 5 min ... 1 day
+  before). While the app is open it shows a reminder card and, if you allow
+  it, a system notification. With Google Calendar sync (next), Google will
+  send the reminder too.
 - **Forgiving habit streaks.** Days a habit isn't scheduled, and days you
   mark as a rest day, never break a streak. Today can't break it before
   midnight. "N times a week" habits count streaks in weeks. Forgot to check
@@ -85,7 +95,7 @@ src/
 3. ✅ Habits with streaks
 4. XP, levels, daily goal, streak freezes
 5. Today dashboard tying it together
-6. Google Calendar sync
+6. Calendar: ✅ day/week/month views, time blocks, daily checklists, reminders; next: Google Calendar two-way sync
 7. Polish: animations, weekly recap, stats
 8. ✅ AI trainer (optional, any AI provider), built early
 

@@ -19,6 +19,10 @@ export type TaskAction =
   /** Check / uncheck. `day` picks the occurrence of a recurring task. */
   | { type: 'task/toggle'; id: string; day: ISODate | null; now: string }
   | { type: 'task/stopRepeating'; id: string; today: ISODate }
+  /** New checklist order: the given ids get increasing `order` values. */
+  | { type: 'task/reorder'; ids: string[] }
+  /** Move unfinished, untimed one-off items from earlier days to today. */
+  | { type: 'task/rollover'; today: ISODate }
   | { type: 'subtask/add'; taskId: string; subtask: Subtask }
   | { type: 'subtask/update'; taskId: string; subtaskId: string; patch: Partial<Subtask> }
   | { type: 'subtask/delete'; taskId: string; subtaskId: string }
@@ -55,6 +59,23 @@ export function tasksReducer(state: TaskState, action: TaskAction): TaskState {
       return mapTask(state, action.id, (t) =>
         t.recurrence ? { ...t, recurrence: { ...t.recurrence, stoppedOn: action.today } } : t,
       )
+    case 'task/reorder': {
+      const rank = new Map(action.ids.map((id, i) => [id, i]))
+      const base = Date.now()
+      return {
+        ...state,
+        tasks: state.tasks.map((t) => (rank.has(t.id) ? { ...t, order: base + rank.get(t.id)! } : t)),
+      }
+    }
+    case 'task/rollover': {
+      let changed = false
+      const tasks = state.tasks.map((t) => {
+        if (t.recurrence || t.completedAt || t.dueTime || !t.dueDate || t.dueDate >= action.today) return t
+        changed = true
+        return { ...t, rolledFrom: t.rolledFrom ?? t.dueDate, dueDate: action.today }
+      })
+      return changed ? { ...state, tasks } : state
+    }
     case 'subtask/add':
       return mapTask(state, action.taskId, (t) => ({ ...t, subtasks: [...t.subtasks, action.subtask] }))
     case 'subtask/update':
