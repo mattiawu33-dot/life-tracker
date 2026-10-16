@@ -62,19 +62,9 @@ export function TaskRow({ view, today, onOpen, hideDate, hideList }: TaskRowProp
 
   return (
     <li className="animate-[row-in_200ms_ease-out]">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpen(task.id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onOpen(task.id)
-          }
-        }}
-        className="flex cursor-pointer items-start gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-surface-2"
-      >
-        <div className="pt-px">
+      <div className="flex items-start gap-1 rounded-2xl pl-3 transition-colors hover:bg-surface-2">
+        {/* The checkbox and "open details" are two separate buttons, side by side. */}
+        <div className="pt-[15px]">
           <Checkbox
             checked={done && !ended}
             disabled={!canToggle}
@@ -85,14 +75,14 @@ export function TaskRow({ view, today, onOpen, hideDate, hideList }: TaskRowProp
             }
           />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className={`text-[15px] leading-snug break-words transition-colors ${done ? 'text-ink-subtle line-through' : ''}`}>
+        <button type="button" onClick={() => onOpen(task.id)} className="min-w-0 flex-1 rounded-2xl py-3 pr-3 pl-2 text-left">
+          <span className={`block text-[15px] leading-snug break-words transition-colors ${done ? 'text-ink-subtle line-through' : ''}`}>
             {task.title || 'Untitled task'}
-          </p>
+          </span>
           {meta.length > 0 && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">{meta}</div>
+            <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">{meta}</span>
           )}
-        </div>
+        </button>
       </div>
     </li>
   )

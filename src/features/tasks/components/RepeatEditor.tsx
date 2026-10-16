@@ -1,21 +1,11 @@
 import { Repeat, X } from 'lucide-react'
 import { useState } from 'react'
 import { buttonClass, inputClass } from '../../../components/ui/styles'
+import { WeekdayPicker } from '../../../components/ui/WeekdayPicker'
 import { shortDate, type ISODate } from '../../../lib/dates'
 import { defaultRecurrence, describeRecurrence, EVERY_DAY, WEEKDAYS } from '../recurrence'
 import { useTasks } from '../store'
 import type { Recurrence, Task } from '../types'
-
-// Monday first, as on a school timetable. Values are JS weekday numbers.
-const WEEK = [
-  { day: 1, short: 'M', name: 'Monday' },
-  { day: 2, short: 'T', name: 'Tuesday' },
-  { day: 3, short: 'W', name: 'Wednesday' },
-  { day: 4, short: 'T', name: 'Thursday' },
-  { day: 5, short: 'F', name: 'Friday' },
-  { day: 6, short: 'S', name: 'Saturday' },
-  { day: 0, short: 'S', name: 'Sunday' },
-]
 
 const sameDays = (a: number[], b: number[]) => a.length === b.length && b.every((d) => a.includes(d))
 
@@ -126,30 +116,12 @@ export function RepeatEditor({ task, today }: { task: Task; today: ISODate }) {
       </div>
 
       {rec.mode === 'weekdays' ? (
-        <div role="group" aria-label="Repeat on these days" className="grid grid-cols-7 gap-1.5">
-          {WEEK.map(({ day, short, name }) => {
-            const on = rec.weekdays.includes(day)
-            return (
-              <button
-                key={day}
-                type="button"
-                aria-pressed={on}
-                aria-label={name}
-                title={name}
-                onClick={() => {
-                  const next = on ? rec.weekdays.filter((d) => d !== day) : [...rec.weekdays, day]
-                  if (next.length === 0) return setError('Pick at least one day.')
-                  setRec({ weekdays: next })
-                }}
-                className={`aspect-square max-h-11 rounded-xl text-sm font-semibold transition-all ${
-                  on ? 'bg-accent text-on-accent' : 'bg-surface text-ink-muted hover:text-ink'
-                }`}
-              >
-                {short}
-              </button>
-            )
-          })}
-        </div>
+        <WeekdayPicker
+          label="Repeat on these days"
+          value={rec.weekdays}
+          onChange={(weekdays) => setRec({ weekdays })}
+          onEmpty={() => setError('Pick at least one day.')}
+        />
       ) : (
         <label className="flex items-center gap-2 text-sm">
           Every

@@ -44,6 +44,11 @@ src/
       quickAdd.ts         "bio essay friday #school !high" -> a task + tests
       selectors.ts        Grouping into Overdue / Today / Tomorrow / ...
       components/         QuickAddBar, TaskRow, TaskDetail, RepeatEditor, ListChips, ListDialog
+    habits/             Everything about habits:
+      types.ts            Habit, schedule (daily / some weekdays / N per week), day log
+      streaks.ts          Forgiving streak rules, completion rate + tests
+      store.ts            The habits reducer (add, edit, delete, mark a day)
+      components/         HabitRow, HabitForm, HabitDetail, Heatmap
   pages/                One file per tab: Today, Tasks, Calendar, Habits, Stats
   lib/                  Plain helpers with no UI: storage, dates, ids, useToday
 ```
@@ -68,12 +73,16 @@ src/
   that's due (today or overdue), or else the next upcoming one. Older missed
   occurrences are skipped instead of piling up. "Stop repeating" ends the
   task but keeps every past completion.
+- **Forgiving habit streaks.** Days a habit isn't scheduled, and days you
+  mark as a rest day, never break a streak. Today can't break it before
+  midnight. "N times a week" habits count streaks in weeks. Forgot to check
+  in? Tap that day on the heatmap to fix it.
 
 ## Roadmap
 
 1. ✅ Project setup + layout shell (navigation, theme, dark mode)
 2. ✅ Tasks with quick-add and lists
-3. Habits with streaks
+3. ✅ Habits with streaks
 4. XP, levels, daily goal, streak freezes
 5. Today dashboard tying it together
 6. Google Calendar sync

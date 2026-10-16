@@ -27,10 +27,7 @@ export function Checkbox({ checked, onChange, label, priority = 'none', disabled
       aria-checked={checked}
       aria-label={label}
       disabled={disabled}
-      onClick={(e) => {
-        e.stopPropagation()
-        onChange()
-      }}
+      onClick={onChange}
       // The visible circle is small; the padding makes it an easy 40px tap target.
       className="-m-2 grid shrink-0 place-items-center rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-40"
     >
